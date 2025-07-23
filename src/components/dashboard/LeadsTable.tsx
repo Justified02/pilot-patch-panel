@@ -58,7 +58,18 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
       if (!response.ok) throw new Error('Failed to generate email');
 
       const result = await response.json();
-      const emailContent = result.email_content || result.message;
+      
+      // Handle N8N response format: [{ "output": { "Subject Line": "...", "Email Body": "..." } }]
+      let emailContent = '';
+      if (Array.isArray(result) && result[0]?.output) {
+        const output = result[0].output;
+        const subject = output["Subject Line"] || output.subject || '';
+        const body = output["Email Body"] || output.body || output.email_body || '';
+        emailContent = JSON.stringify({ subject, body });
+      } else {
+        // Fallback to original format
+        emailContent = result.email_content || result.message || '';
+      }
 
       onLeadUpdate?.(lead.id, { generated_email: emailContent });
       setSelectedLead({ ...lead, generated_email: emailContent });
